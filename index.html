@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 快乐班级积分榜 🌟</title>
+    <style>
+        /* --- 整体风格设置 --- */
+        :root {
+            --primary-color: #FF9A9E; /* 柔和粉 */
+            --secondary-color: #FECFEF; /* 浅粉 */
+            --accent-color: #84fab0; /* 薄荷绿 */
+            --bg-color: #f6f9fc;
+            --card-bg: #ffffff;
+            --text-color: #4a4a4a;
+        }
+
+        body {
+            font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 0px #ffeaa7;
+            margin-bottom: 30px;
+        }
+
+        /* --- 顶部控制栏 --- */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-import { background-color: #4facfe; color: white; }
+        .btn-add-rule { background-color: #43e97b; color: white; }
+        .btn-undo { background-color: #ff9f43; color: white; } /* 新增撤销按钮颜色 */
+        .btn-reset { background-color: #a8a8a8; color: white; }
+
+        /* --- 学生卡片网格 --- */
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .student-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+            border: 3px solid transparent;
+            cursor: pointer;
+            user-select: none; /* 防止双击选中文字 */
+        }
+
+        .student-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .avatar {
+            font-size: 50px;
+            margin-bottom: 10px;
+            display: block;
+            line-height: 1.2;
+        }
+
+        .name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .score-badge {
+            background-color: #fff4e6;
+            color: #ff9f43;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+            display: inline-block;
+        }
+
+        /* --- 弹窗样式 --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal h2 { margin-top: 0; color: #333; }
+
+        textarea, input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        textarea:focus, input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .top-three {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 24px;
+            transform: rotate(15deg);
+        }
+
+        /* 操作面板 */
+        .action-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .action-btn {
+            padding: 10px;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            justify-content: center;
+            flex-direction: column;
+            line-height: 1.4;
+        }
+        .btn-plus { background-color: #43e97b; }
+        .btn-minus { background-color: #ff6b6b; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🎈 快乐成长积分榜 🎈</h1>
+
+    <div class="controls">
+        <button class="btn-import" onclick="openModal('importModal')">📝 导入名单</button>
+        <button class="btn-add-rule" onclick="openModal('ruleModal')">➕ 规则设置</button>
+        <button class="btn-undo" onclick="undoLastAction()">↩️ 撤销上一步</button>
+        <button class="btn-reset" onclick="confirmReset()">🗑️ 重置数据</button>
+    </div>
+
+    <!-- 学生列表区域 -->
+    <div class="student-grid" id="studentGrid">
+        <!-- 学生卡片将通过JS生成 -->
+    </div>
+
+    <!-- 1. 导入名单弹窗 -->
+    <div id="importModal" class="modal-overlay">
+        <div class="modal">
+            <h2>📝 导入学生名单</h2>
+            <p style="font-size:0.9em; color:#666;">请输入学生姓名，每行一个</p>
+            <textarea id="nameListInput" rows="8" placeholder="张三&#10;李四&#10;王五"></textarea>
+            <div class="modal-buttons">
+                <button onclick="closeModal('importModal')" style="background:#ccc">取消</button>
+                <button onclick="importStudents()" class="btn-import">确认导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 操作弹窗 (点击学生后出现) -->
+    <div id="actionModal" class="modal-overlay">
+        <div class="modal">
+            <h2 id="currentStudentName">操作</h2>
+            <div id="quickActions" class="action-panel">
+                <!-- 快捷按钮JS生成 -->
+            </div>
+            
+            <hr style="margin: 20px 0; border:0; border-top:1px dashed #eee;">
+            
+            <h3>自定义变动</h3>
+            <input type="text" id="customReason" placeholder="理由（如：帮助同学）">
+            <input type="number" id="customScore" placeholder="分值（如：2 或 -5）">
+            
+            <div class="modal-buttons">
+                <button onclick="closeModal('actionModal')" style="background:#ccc">取消</button>
+                <button onclick="applyCustomScore()" class="btn-import">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 规则管理弹窗 -->
+    <div id="ruleModal" class="modal-overlay">
+        <div class="modal">
+            <h2>⚙️ 设置常用加减分项</h2>
+            <p>输入格式：理由,分值 (每行一个)</p>
+            <textarea id="rulesInput" rows="8" placeholder="作业工整,2&#10;回答问题积极,1&#10;兑换铅笔,-10&#10;迟到,-2"></textarea>
+            <div class="modal-buttons">
+                <button onclick="closeModal('ruleModal')" style="background:#ccc">取消</button>
+                <button onclick="saveRules()" class="btn-add-rule">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 数据管理 ---
+        let students = JSON.parse(localStorage.getItem('class_students')) || [];
+        
+        // 历史记录栈（用于撤销）
+        let historyStack = [];
+
+        // 默认规则
+        let rules = JSON.parse(localStorage.getItem('class_rules')) || [
+            { reason: "📚 作业全对", score: 2 },
+            { reason: "🙋‍♂️ 积极举手", score: 1 },
+            { reason: "🧹 卫生标兵", score: 3 },
+            { reason: "🎁 兑换小零食", score: -10 },
+            { reason: "🎁 兑换免写卡", score: -20 }
+        ];
+
+        let currentStudentIndex = null;
+        
+        // 随机头像数组（emoji）
+        const avatars = ['🦁', '🐯', '🐼', '🐨', '🐰', '🦊', '🐶', '🐱', '🦄', '🐸', '🐵', '🦉'];
+
+        // --- 初始化 ---
+        window.onload = function() {
+            renderStudents();
+        };
+
+        // --- 历史记录功能 (撤销) ---
+        function saveToHistory() {
+            // 将当前状态深拷贝存入历史记录
+            if (historyStack.length > 20) historyStack.shift(); // 最多存20步
+            historyStack.push(JSON.stringify(students));
+        }
+
+        function undoLastAction() {
+            if (historyStack.length === 0) {
+                alert("已经没有可以撤销的操作啦！");
+                return;
+            }
+            // 恢复上一步
+            const prevState = historyStack.pop();
+            students = JSON.parse(prevState);
+            saveData();
+            renderStudents();
+        }
+
+        // --- 渲染逻辑 ---
+        function renderStudents() {
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = '';
+
+            // 按分数排序
+            const sortedStudents = [...students].sort((a, b) => b.score - a.score);
+
+            students.forEach((student, index) => {
+                const card = document.createElement('div');
+                card.className = 'student-card';
+                card.onclick = () => openActionModal(index);
+
+                // *** 修复部分：确保索引是整数 ***
+                // 使用 Math.floor 取整，防止出现 undefined
+                const avatarIndex = Math.floor(student.id) % avatars.length;
+                const avatar = avatars[avatarIndex] || '😄'; // 如果万一还没找到，给个默认笑脸
+
+                // 排名徽章
+                let rankBadge = '';
+                const rank = sortedStudents.findIndex(s => s.id === student.id);
+                if (rank === 0) rankBadge = '<div class="top-three">👑</div>';
+                else if (rank === 1) rankBadge = '<div class="top-three">🥈</div>';
+                else if (rank === 2) rankBadge = '<div class="top-three">🥉</div>';
+
+                card.innerHTML = `
+                    ${rankBadge}
+                    <span class="avatar">${avatar}</span>
+                    <div class="name">${student.name}</div>
+                    <div class="score-badge">${student.score} 分</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- 导入功能 ---
+        function importStudents() {
+            const text = document.getElementById('nameListInput').value;
+            if (!text.trim()) return;
+
+            saveToHistory(); // 操作前保存历史
+
+            const names = text.split('\n').map(n => n.trim()).filter(n => n);
+            
+            names.forEach(name => {
+                // 简单的防重名检查
+                if(!students.find(s => s.name === name)){
+                    students.push({
+                        // 使用整数作为ID的一部分，减少计算误差
+                        id: Date.now() + Math.floor(Math.random() * 1000), 
+                        name: name,
+                        score: 0
+                    });
+                }
+            });
+
+            saveData();
+            renderStudents();
+            closeModal('importModal');
+        }
+
+        // --- 积分操作逻辑 ---
+        function openActionModal(index) {
+            currentStudentIndex = index;
+            const student = students[index];
+            document.getElementById('currentStudentName').innerText = `给 ${student.name} 加减分`;
+            
+            // 生成快捷按钮
+            const container = document.getElementById('quickActions');
+            container.innerHTML = '';
+            
+            rules.forEach(rule => {
+                const btn = document.createElement('button');
+                btn.className = `action-btn ${rule.score > 0 ? 'btn-plus' : 'btn-minus'}`;
+                btn.innerHTML = `<span>${rule.reason}</span> <span style="font-size:1.2em"><b>${rule.score > 0 ? '+' : ''}${rule.score}</b></span>`;
+                btn.onclick = () => changeScore(rule.score);
+                container.appendChild(btn);
+            });
+
+            // 清空自定义输入
+            document.getElementById('customReason').value = '';
+            document.getElementById('customScore').value = '';
+
+            openModal('actionModal');
+        }
+
+        function changeScore(amount) {
+            if (currentStudentIndex === null) return;
+            
+            // 如果是减分（兑换），检查分数是否足够
+            if (amount < 0 && students[currentStudentIndex].score + amount < 0) {
+                alert("哎呀，积分不够兑换这个奖励哦！加油赚积分吧！");
+                return;
+            }
+
+            saveToHistory(); // 操作前保存历史
+
+            students[currentStudentIndex].score += parseInt(amount);
+            saveData();
+            renderStudents();
+            closeModal('actionModal');
+        }
+
+        function applyCustomScore() {
+            const score = document.getElementById('customScore').value;
+            if (score) {
+                changeScore(parseInt(score));
+            }
+        }
+
+        // --- 规则管理 ---
+        function saveRules() {
+            const text = document.getElementById('rulesInput').value;
+            const lines = text.split('\n');
+            const newRules = [];
+
+            lines.forEach(line => {
+                const parts = line.split(/,|，/); // 支持中英文逗号
+                if (parts.length >= 2) {
+                    newRules.push({
+                        reason: parts[0].trim(),
+                        score: parseInt(parts[1].trim())
+                    });
+                }
+            });
+
+            if (newRules.length > 0) {
+                rules = newRules;
+                localStorage.setItem('class_rules', JSON.stringify(rules));
+                alert('规则已更新！');
+                closeModal('ruleModal');
+            } else {
+                alert('格式不正确，请确保格式为：理由,分值');
+            }
+        }
+
+        // --- 通用功能 ---
+        function saveData() {
+            localStorage.setItem('class_students', JSON.stringify(students));
+        }
+
+        function confirmReset() {
+            if(confirm("确定要清空所有学生数据吗？\n(如果点错了，可以立即点‘撤销’恢复)")) {
+                saveToHistory(); // 操作前保存历史
+                students = [];
+                saveData();
+                renderStudents();
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            if(id === 'ruleModal') {
+                const ruleText = rules.map(r => `${r.reason},${r.score}`).join('\n');
+                document.getElementById('rulesInput').value = ruleText;
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
